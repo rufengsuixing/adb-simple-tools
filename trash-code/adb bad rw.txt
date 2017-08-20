@@ -1,0 +1,92 @@
+    def _adb_co(self,command):
+        back=subprocess.Popen('adb shell' ,shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+        inby=command.encode('utf-8')+b';exit\n'
+        back.stdin.write(inby)
+        return back
+    #no use
+    def _adbread_once(self,path,pos,size):
+        srskip=str(pos)
+        if size is None or size < 0:
+            back=self._adb_co('dd if='+path+' bs=1 skip='+srskip+' 2>/dev/null')
+        else:
+            back=self._adb_co('dd if='+path+' bs=1 count='+str(size)+' skip='+srskip+' 2>/dev/null')
+        by=back.communicate()[0]
+        po=by.find(b'\r\r\r\n')
+        back.kill()
+        by=by[po+4:]
+        by=by.replace(b'\r\r\n',b'\n')
+        return by
+    #no use
+    def _adbwrite_once(self,path,pos,data):
+        srseek=str(pos)
+        count=len(data)
+        constr=str(count)
+        #android dd don`t support dd conv arg,,fuckkkkkkkkkkkkkkk
+        back=self._adb_co('dd of='+path+' bs=1 seek='+srseek+' count='+constr+' conv=notrunc')
+        back.stdin.write(data+b'\n')
+        back.wait()
+        back.kill()
+	def read(self, size=None):
+        print('read '+self.path)
+        
+        #slow,aaaaaaaaaaaaaaaa!!!!!!!
+        #byget=self._adbread_once(self.path,self.pos,size)
+        #self.pos+=len(byget)
+        #return byget
+    @fileadberrors
+    def write(self, data):
+        print('write')
+        #bugs,aaaaaaaaaaaaaaaa
+        #self._adbwrite_once(self.path,self.pos,data)
+        #self.pos+=len(data)
+        #if self.pos>self.file_size:
+        #    self.file_size=self.pos
+    @fileadberrors
+    def seek(self, pos, where=fs.SEEK_SET):
+        current = self.tell()
+        new_pos = None
+        if where == fs.SEEK_SET:
+            new_pos = pos
+        elif where == fs.SEEK_CUR:
+            new_pos = current + pos
+        elif where == fs.SEEK_END:
+            new_pos = self.file_size + pos
+        if new_pos < 0:
+            raise ValueError("Can't seek before start of file")
+
+    @fileadberrors
+    def tell(self):
+        return self.pos
+
+    @fileadberrors
+    def truncate(self, size=None):
+        print('truncate')
+        self.adbfs._on_file_written(self.path)
+        
+        if size is None:
+            size = self.tell()
+        back=subprocess.Popen('adb shell truncate -s '+ str(size) +' '+self.path,shell=True,stdout=subprocess.PIPE)
+        st=back.communicate()
+        back.kill()
+		
+		
+		#...................
+def setcontents(self, path, data=b'', encoding=None, errors=None, chunk_size=1024*64):
+        path = normpath(path)
+        self.refresh_dircache(dirname(path))
+        back=subprocess.Popen('adb shell dd of='+path+' conv=notrunc',shell=True,stdin=subprocess.PIPE)
+        back.stdin.write(data)
+        back.stdin.write(b'\004')
+        back.wait()
+        back.kill()
+    @adberrors
+    def getcontents(self, path, mode="rb", encoding=None, errors=None, newline=None):
+        path = normpath(path)
+        # 方法1
+        back=subprocess.Popen('adb shell dd if='+path+' conv=notrunc',shell=True,stdout=subprocess.PIPE)
+        data=back.communicate()[0]
+        back.kill()
+        if 'b' in mode:
+            return data
+        return iotools.decode_binary(data, encoding=encoding, errors=errors)
+    
